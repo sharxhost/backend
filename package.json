@@ -1,0 +1,9 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "SharX backend",
+  "main": "index.js",
+  "repository": "git@github.com:sharxhost/backend.git",
+  "author": "GGORG <GGORG0@protonmail.com>",
+  "license": "GPL-3.0"
+}
