@@ -2,8 +2,24 @@
   "name": "backend",
   "version": "1.0.0",
   "description": "SharX backend",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "ts-node .",
+    "lint": "eslint .",
+    "build": "tsc",
+    "start": "node ./dist/index.js"
+  },
   "repository": "https://github.com/sharxhost/backend.git",
   "author": "GGORG <GGORG0@protonmail.com>",
-  "license": "GPL-3.0"
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.27.1",
+    "@typescript-eslint/parser": "^5.27.1",
+    "eslint": "^8.17.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "prettier": "^2.6.2",
+    "typescript": "^4.7.3"
+  }
 }
