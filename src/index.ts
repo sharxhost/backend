@@ -1,8 +1,12 @@
 import "dotenv/config";
 import express, { Router } from "express";
-import signale from "signale";
+import { Signale } from "signale";
 import { PrismaClient } from "@prisma/client";
 import { readdirSync } from "fs";
+
+const signale = new Signale({
+  scope: "main",
+});
 
 const prisma = new PrismaClient({
   log: [
@@ -24,12 +28,12 @@ const prisma = new PrismaClient({
     },
   ],
 });
-prisma.$on("query", signale.debug);
-prisma.$on("error", signale.fatal);
-prisma.$on("info", signale.info);
-prisma.$on("warn", signale.warn);
 
-export { prisma };
+const prismaLogger = signale.scope("prisma");
+prisma.$on("query", prismaLogger.debug);
+prisma.$on("error", prismaLogger.fatal);
+prisma.$on("info", prismaLogger.info);
+prisma.$on("warn", prismaLogger.warn);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -43,8 +47,9 @@ routes.forEach((route) => {
     // eslint-disable-next-line
     const routeModule: Router = require(`./routes/${route}`).default as Router;
     app.use(routeModule);
-    signale.success(`Router ${route} loaded`);
   }
 });
 
 app.listen(port, () => signale.success(`Listening on port ${port}`));
+
+export { prisma };
