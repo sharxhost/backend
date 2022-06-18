@@ -7,7 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  username String @unique @db.VarChar(255)
-  uuid     String @id @unique @db.Uuid
+model Image {
+  shortid   String   @unique @db.Char(8)
+  uuid      String   @id @db.Uuid @default(uuid())
+  name      String
+  uploaded  DateTime @default(now())
+  size      Int
+  hash      String   @db.Char(64)
 }

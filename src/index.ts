@@ -4,6 +4,8 @@ import { Signale } from "signale";
 import { PrismaClient } from "@prisma/client";
 import { readdirSync } from "fs";
 
+export let startTime: Date;
+
 const signale = new Signale({
   scope: "main",
 });
@@ -46,10 +48,20 @@ routes.forEach((route) => {
     signale.info(`Loading router ${route}...`);
     // eslint-disable-next-line
     const routeModule: Router = require(`./routes/${route}`).default as Router;
-    app.use(routeModule);
+    // eslint-disable-next-line
+    const prefix: string | undefined = require(`./routes/${route}`).prefix;
+    if (!routeModule) {
+      signale.error(`Failed to load router ${route}!`);
+      return;
+    }
+    if (prefix) app.use(prefix, routeModule);
+    else app.use(routeModule);
   }
 });
 
-app.listen(port, () => signale.success(`Listening on port ${port}`));
+app.listen(port, () => {
+  startTime = new Date();
+  signale.success(`Listening on port ${port}`);
+});
 
 export { prisma };

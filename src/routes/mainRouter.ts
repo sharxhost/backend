@@ -1,10 +1,8 @@
-import Signale from "signale";
 import { Router } from "express";
-import { prisma } from "../index";
-import { basename } from "path";
+import { createSignale } from "../utils";
 
-const signale = Signale.scope(basename(__filename));
-signale.success("Registered!");
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const signale = createSignale(__filename);
 
 const router = Router();
 
@@ -12,14 +10,6 @@ router.get("/", (req, res) => {
   res.json({
     success: true,
     message: "Hello World!",
-  });
-});
-
-router.get("/users", async (req, res) => {
-  const users = await prisma.user.findMany();
-  res.json({
-    success: true,
-    users: users,
   });
 });
 
