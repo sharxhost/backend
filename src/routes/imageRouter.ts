@@ -42,7 +42,7 @@ router.post("/upload", multer().single("image"), async (req, res) => {
       }
     });
 
-    await writeFile(`${imageStorageDir}/${dbImage.uuid}${extname(image.originalname)}`, image.buffer);
+    await writeFile(join(imageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
 
     res.json({
       success: true,
