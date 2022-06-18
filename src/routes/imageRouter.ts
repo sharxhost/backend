@@ -25,9 +25,7 @@ router.post("/upload", multer().single("image"), async (req, res) => {
   try {
     const image = req.file;
 
-    if (!image) {
-      throw "No image provided";
-    }
+    if (!image) throw "No image provided";
 
     const imageHash = await imageHashAsync({ data: image.buffer }, 16, true);
     let shortImageId = "";
