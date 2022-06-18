@@ -5,7 +5,7 @@ import { randomInt } from "crypto";
 import multer from "multer";
 import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
-import { extname } from "path";
+import { extname, join, resolve } from "path";
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -14,7 +14,8 @@ const signale = createSignale(__filename);
 const router = Router();
 
 const imageIdChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const imageStorageDir = process.env.IMAGE_STORAGE_DIR || "./data/images";
+const imageStorageDir = process.env.IMAGE_STORAGE_DIR || "data/images";
+const absoluteImageStorageDir = resolve(join(__dirname, "..", "..", imageStorageDir));
 
 if (!existsSync(imageStorageDir)) {
   signale.warn(`Image storage directory ${imageStorageDir} does not exist. Creating it.`);
@@ -42,7 +43,7 @@ router.post("/upload", multer().single("image"), async (req, res) => {
       }
     });
 
-    await writeFile(join(imageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
+    await writeFile(join(absoluteImageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
 
     res.json({
       success: true,
