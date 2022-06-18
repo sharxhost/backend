@@ -60,6 +60,33 @@ router.post("/upload", multer().single("image"), async (req, res) => {
   }
 });
 
+router.get("/:id", async (req, res) => {
+  try {
+    const imgId = req.params.id;
+
+    const dbImage = await prisma.image.findUnique({
+      where: {
+        shortid: imgId
+      }
+    });
+
+    if (!dbImage) throw "Image not found";
+
+    const imgPath = `${dbImage.uuid}${extname(dbImage.name)}`;
+
+    if (!existsSync(join(absoluteImageStorageDir, imgPath))) throw "Image file not found";
+
+    res.sendFile(imgPath, { root: absoluteImageStorageDir });
+  }
+  catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err
+    });
+    signale.fatal(err);
+  }
+});
+
 
 export const prefix = "/image";
 export default router;
