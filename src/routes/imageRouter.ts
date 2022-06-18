@@ -88,5 +88,36 @@ router.get("/:id", async (req, res) => {
 });
 
 
+router.get("/:id/meta", async (req, res) => {
+  try {
+    const imgId = req.params.id;
+
+    const dbImage = await prisma.image.findUnique({
+      where: {
+        shortid: imgId
+      }
+    });
+
+    if (!dbImage) throw "Image not found";
+
+    res.json({
+      success: true,
+      shortid: dbImage.shortid,
+      uuid: dbImage.uuid,
+      name: dbImage.name,
+      uploaded: dbImage.uploaded,
+      size: dbImage.size,
+      hash: dbImage.hash
+    });
+  }
+  catch (err) {
+    res.status(500).json({
+      success: false,
+      error: err
+    });
+    signale.fatal(err);
+  }
+});
+
 export const prefix = "/image";
 export default router;
