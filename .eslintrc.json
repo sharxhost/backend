@@ -31,7 +31,7 @@
 		],
 		"comma-dangle": [
 			"error",
-			"only-multiline"
+			"always-multiline"
 		]
 	}
 }
