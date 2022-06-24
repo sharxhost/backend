@@ -19,7 +19,7 @@ const absoluteImageStorageDir = resolve(join(__dirname, "..", "..", imageStorage
 
 if (!existsSync(imageStorageDir)) {
   signale.warn(`Image storage directory ${imageStorageDir} does not exist. Creating it.`);
-  mkdirSync(imageStorageDir);
+  mkdirSync(absoluteImageStorageDir, { recursive: true });
 }
 
 router.post("/upload", multer().single("image"), async (req, res) => {

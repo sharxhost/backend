@@ -1,5 +1,5 @@
 {
-  "name": "backend",
+  "name": "sharx-backend",
   "version": "1.0.0",
   "description": "SharX backend",
   "main": "dist/index.js",
@@ -8,7 +8,8 @@
     "dev": "nodemon src/index.ts",
     "lint": "eslint .",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "genprisma": "prisma generate"
   },
   "repository": "https://github.com/sharxhost/backend.git",
   "author": "GGORG <GGORG0@protonmail.com>",

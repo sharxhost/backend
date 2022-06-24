@@ -3,6 +3,7 @@ import express, { Router } from "express";
 import { Signale } from "signale";
 import { PrismaClient } from "@prisma/client";
 import { readdirSync } from "fs";
+import { join } from "path";
 
 export let startTime: Date;
 
@@ -42,9 +43,9 @@ const port = process.env.PORT || 8080;
 
 app.use(express.json());
 
-const routes = readdirSync("./src/routes");
+const routes = readdirSync(join(__dirname, "routes"));
 routes.forEach((route) => {
-  if (route.endsWith(".ts")) {
+  if (route.endsWith(".ts") || route.endsWith(".js")) {
     signale.info(`Loading router ${route}...`);
     // eslint-disable-next-line
     const routeModule: Router = require(`./routes/${route}`).default as Router;

@@ -1,0 +1,32 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=very-insecure-password
+    # ports:  # uncomment to expose the db to the host
+    #   - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  sharx-backend:
+    build: .
+    restart: always
+    environment: # use this or the .env file
+      - "DATABASE_URL=postgresql://postgres:very-insecure-password@db:5432/sharx?schema=public"
+      - CUSTOM_HOST_NAME=SharX
+      - IMAGE_STORAGE_DIR=data/images
+      - PORT=8080
+    depends_on:
+      - db
+    ports:
+      - 8080:8080
+    volumes:
+      - ./data:/usr/src/app/data
+
+
+volumes:
+  postgres-data:
