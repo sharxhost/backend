@@ -1,7 +1,5 @@
 import { Router } from "express";
-import { createSignale } from "../utils";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { createSignale, getOutput } from "../utils";
 import { prisma, startTime } from "../index";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -11,7 +9,6 @@ const router = Router();
 
 router.get("/info", async (req, res) => {
   try {
-    const { stdout } = await promisify(exec)("git describe --tags --always");
     res.json({
       success: true,
       git: {
@@ -26,7 +23,7 @@ router.get("/info", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "error while running git describe",
-      error: err
+      error: err,
     });
   }
 });

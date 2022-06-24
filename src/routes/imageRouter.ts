@@ -39,8 +39,8 @@ router.post("/upload", multer().single("image"), async (req, res) => {
         shortid: shortImageId,
         name: image.originalname,
         hash: imageHash,
-        size: image.size
-      }
+        size: image.size,
+      },
     });
 
     await writeFile(join(absoluteImageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
@@ -48,14 +48,14 @@ router.post("/upload", multer().single("image"), async (req, res) => {
     res.json({
       success: true,
       shortid: shortImageId,
-      uuid: dbImage.uuid
+      uuid: dbImage.uuid,
     });
 
   }
   catch (err) {
     res.status(500).json({
       success: false,
-      error: err
+      error: err,
     });
   }
 });
@@ -66,8 +66,8 @@ router.get("/:id", async (req, res) => {
 
     const dbImage = await prisma.image.findUnique({
       where: {
-        shortid: imgId
-      }
+        shortid: imgId,
+      },
     });
 
     if (!dbImage) throw "Image not found";
@@ -81,7 +81,7 @@ router.get("/:id", async (req, res) => {
   catch (err) {
     res.status(500).json({
       success: false,
-      error: err
+      error: err,
     });
     signale.fatal(err);
   }
@@ -94,8 +94,8 @@ router.get("/:id/meta", async (req, res) => {
 
     const dbImage = await prisma.image.findUnique({
       where: {
-        shortid: imgId
-      }
+        shortid: imgId,
+      },
     });
 
     if (!dbImage) throw "Image not found";
@@ -107,13 +107,13 @@ router.get("/:id/meta", async (req, res) => {
       name: dbImage.name,
       uploaded: dbImage.uploaded,
       size: dbImage.size,
-      hash: dbImage.hash
+      hash: dbImage.hash,
     });
   }
   catch (err) {
     res.status(500).json({
       success: false,
-      error: err
+      error: err,
     });
     signale.fatal(err);
   }

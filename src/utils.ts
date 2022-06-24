@@ -1,6 +1,8 @@
 import { BufferObject, imageHash, UrlRequestObject } from "image-hash";
 import { basename } from "path";
 import Signale from "signale";
+import { exec } from "child_process";
+import { promisify } from "util";
 
 export function createSignale(filename: string, notify = true) {
   const signale = Signale.scope(basename(filename));
@@ -18,3 +20,9 @@ export const imageHashAsync = (oldSrc: string | UrlRequestObject | BufferObject,
     });
   });
 };
+
+export async function getOutput(command: string) {
+  const asyncExec = promisify(exec);
+  const { stdout } = await asyncExec(command);
+  return stdout.trim();
+}
