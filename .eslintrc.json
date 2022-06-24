@@ -30,7 +30,7 @@
 			"always"
 		],
 		"comma-dangle": [
-			"error",
+			"warn",
 			"always-multiline"
 		]
 	}
