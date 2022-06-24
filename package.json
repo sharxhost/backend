@@ -10,7 +10,8 @@
     "lint:fix": "eslint . --fix",
     "build": "tsc",
     "start": "node dist/index.js",
-    "genprisma": "prisma generate"
+    "genprisma": "prisma generate",
+    "commit": "cz"
   },
   "repository": "https://github.com/sharxhost/backend.git",
   "author": "GGORG <GGORG0@protonmail.com>",
@@ -22,6 +23,8 @@
     "@types/signale": "^1.4.4",
     "@typescript-eslint/eslint-plugin": "^5.27.1",
     "@typescript-eslint/parser": "^5.27.1",
+    "commitizen": "^4.2.4",
+    "cz-conventional-changelog": "3.3.0",
     "eslint": "^8.17.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -39,5 +42,10 @@
     "image-hash": "^5.3.1",
     "multer": "^1.4.5-lts.1",
     "signale": "^1.4.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
   }
 }
