@@ -14,8 +14,12 @@ router.get("/info", async (req, res) => {
     const { stdout } = await promisify(exec)("git describe --tags --always");
     res.json({
       success: true,
-      gitver: stdout.trim(),
-      name: process.env.CUSTOM_HOST_NAME || "SharX"
+      git: {
+        commit: await getOutput("git rev-parse HEAD"),
+        tag: await getOutput("git describe --tags"),
+        branch: await getOutput("git rev-parse --abbrev-ref HEAD"),
+      },
+      name: process.env.CUSTOM_HOST_NAME || "SharX",
     });
   }
   catch (err) {
