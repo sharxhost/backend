@@ -9,12 +9,14 @@ const router = Router();
 
 router.get("/info", async (req, res) => {
   try {
+    const tag = await getOutput("git describe --tags"); 
     res.json({
       success: true,
       git: {
         commit: await getOutput("git rev-parse HEAD"),
-        tag: await getOutput("git describe --tags"),
+        tag: tag,
         branch: await getOutput("git rev-parse --abbrev-ref HEAD"),
+        semver: tag.substring(1).split("-")[0].split(".").map(x => parseInt(x)),
       },
       name: process.env.CUSTOM_HOST_NAME || "SharX",
     });
