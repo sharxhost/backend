@@ -83,7 +83,6 @@ router.get("/:id", async (req, res) => {
       success: false,
       error: err,
     });
-    signale.fatal(err);
   }
 });
 
@@ -115,7 +114,6 @@ router.get("/:id/meta", async (req, res) => {
       success: false,
       error: err,
     });
-    signale.fatal(err);
   }
 });
 
