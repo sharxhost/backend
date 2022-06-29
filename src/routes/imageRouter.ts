@@ -6,6 +6,7 @@ import multer from "multer";
 import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname, join, resolve } from "path";
+import jwt, { TokenExpiredError } from "jsonwebtoken";
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -24,32 +25,61 @@ if (!existsSync(imageStorageDir)) {
 
 router.post("/upload", multer().single("image"), async (req, res) => {
   try {
-    const image = req.file;
+    const tokenHeader = req.headers["authorization"];
+    if (!tokenHeader) return res.status(401).json({ success: false, error: "No  provided" });
+    const token = tokenHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ success: false, error: "No token provided" });
 
-    if (!image) throw "No image provided";
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      if (!(decoded instanceof Object) ||
+        !(typeof decoded.user === "string") ||
+        !(typeof decoded.type === "string") ||
+        !(decoded.type === "upload"))
+        return res.status(401).json({ success: false, error: "Invalid token" });
+      const keyObject = await prisma.uploadKey.findUnique({ where: { key: token } });
+      if (!keyObject) return res.status(401).json({ success: false, error: "Invalid token" });
+      const user = await prisma.user.findUnique({ where: { uuid: decoded.user } });
+      if (!user) {
+        return res.status(401).json({ success: false, error: "Invalid user" });
+      }
 
-    const imageHash = await imageHashAsync({ data: image.buffer }, 16, true);
-    let shortImageId = "";
-    for (let i = 0; i < 8; i++) {
-      shortImageId += imageIdChars[randomInt(0, imageIdChars.length - 1)];
-    }
+      const image = req.file;
 
-    const dbImage = await prisma.image.create({
-      data: {
+      if (!image) throw "No image provided";
+
+      const imageHash = await imageHashAsync({ data: image.buffer }, 16, true);
+      let shortImageId = "";
+      for (let i = 0; i < 8; i++) {
+        shortImageId += imageIdChars[randomInt(0, imageIdChars.length - 1)];
+      }
+
+      const dbImage = await prisma.image.create({
+        data: {
+          shortid: shortImageId,
+          name: image.originalname,
+          hash: imageHash,
+          size: image.size,
+          userId: user.uuid,
+        },
+      });
+
+      await writeFile(join(absoluteImageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
+
+      res.json({
+        success: true,
         shortid: shortImageId,
-        name: image.originalname,
-        hash: imageHash,
-        size: image.size,
-      },
-    });
-
-    await writeFile(join(absoluteImageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
-
-    res.json({
-      success: true,
-      shortid: shortImageId,
-      uuid: dbImage.uuid,
-    });
+        uuid: dbImage.uuid,
+      });
+    }
+    catch (err) {
+      if (typeof err === typeof TokenExpiredError) {
+        return res.status(403).json({ success: false, error: "Token expired" });
+      }
+      else {
+        return res.status(401).json({ success: false, error: "Invalid token" });
+      }
+    }
 
   }
   catch (err) {
