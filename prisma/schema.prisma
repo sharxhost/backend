@@ -14,6 +14,8 @@ model Image {
   uploaded  DateTime @default(now())
   size      Int
   hash      String   @db.Char(64) @unique
+  user      User     @relation(fields: [userId], references: [uuid])
+  userId    String   @db.Uuid
 }
 
 model User {
@@ -24,6 +26,7 @@ model User {
   passwordSalt  String    @db.Char(12)
   email         String    @unique
   uploadKeys    UploadKey[]
+  images        Image[]
 }
 
 model UploadKey {
