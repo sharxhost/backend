@@ -22,16 +22,25 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
       !(typeof decoded.user === "string") ||
       !(typeof decoded.type === "string") ||
       !(decoded.type === "auth"))
-      return res.status(403).json({ success: false, error: "Invalid token" });
-    res.locals.user = decoded.user;
-    next();
+      return res.status(401).json({ success: false, error: "Invalid token" });
+    prisma.user.findUnique({ where: { uuid: decoded.user } }).then(user => {
+      if (!user) {
+        return res.status(401).json({ success: false, error: "Invalid user" });
+      }
+
+      res.locals.user = user.uuid;
+      res.locals.userObj = user;
+      next();
+    }).catch((e: unknown) => {
+      res.status(500).json({ success: false, error: e });
+    });
   }
   catch (err) {
     if (typeof err === typeof TokenExpiredError) {
       return res.status(403).json({ success: false, error: "Token expired" });
     }
     else {
-      return res.status(403).json({ success: false, error: "Invalid token" });
+      return res.status(401).json({ success: false, error: "Invalid token" });
     }
   }
 
