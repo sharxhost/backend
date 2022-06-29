@@ -18,7 +18,10 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    if (!(decoded instanceof Object) || !(typeof decoded.user === "string"))
+    if (!(decoded instanceof Object) ||
+      !(typeof decoded.user === "string") ||
+      !(typeof decoded.type === "string") ||
+      !(decoded.type === "auth"))
       return res.status(403).json({ success: false, error: "Invalid token" });
     res.locals.user = decoded.user;
     next();
@@ -87,7 +90,7 @@ router.post("/create", async (req, res) => {
         },
       });
 
-      const token = jwt.sign({ user: user.uuid, ip: req.ip }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+      const token = jwt.sign({ user: user.uuid, ip: req.ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
 
       res.json({
         success: true,
@@ -131,7 +134,7 @@ router.post("/login", async (req, res) => {
 
     if (hash !== user.passwordHash) throw "Invalid credentials";
 
-    const token = jwt.sign({ user: user.uuid, ip: req.ip }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+    const token = jwt.sign({ user: user.uuid, ip: req.ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
 
     res.json({
       success: true,
