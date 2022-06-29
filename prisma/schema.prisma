@@ -28,6 +28,6 @@ model User {
 
 model UploadKey {
   user      User    @relation(fields: [userId], references: [uuid])
-  userId    String  @db.Uuid @unique  
+  userId    String  @db.Uuid
   key       String  @id
 }
