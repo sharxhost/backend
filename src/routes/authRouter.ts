@@ -19,7 +19,7 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
     if (!(decoded instanceof Object) || !(typeof decoded.user === "string"))
-      return res.status(403).json({ success: false, error: "Invalid token q" });
+      return res.status(403).json({ success: false, error: "Invalid token" });
     res.locals.user = decoded.user;
     next();
   }
