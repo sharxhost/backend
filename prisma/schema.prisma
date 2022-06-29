@@ -23,4 +23,11 @@ model User {
   passwordHash  String
   passwordSalt  String    @db.Char(12)
   email         String    @unique
+  uploadKeys    UploadKey[]
+}
+
+model UploadKey {
+  user      User    @relation(fields: [userId], references: [uuid])
+  userId    String  @db.Uuid @unique  
+  key       String  @id
 }
