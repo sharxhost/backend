@@ -4,6 +4,7 @@ import { Signale } from "signale";
 import { PrismaClient } from "@prisma/client";
 import { readdirSync } from "fs";
 import { join } from "path";
+import { randomBytes } from "crypto";
 
 export let startTime: Date;
 
@@ -42,6 +43,12 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 app.use(express.json());
+
+if (!process.env.JWT_SECRET) {
+  signale.warn("$JWT_SECRET is not set. Using a random one. That means it will change every time the container is restarted and log everyone out!");
+  process.env.JWT_SECRET = randomBytes(32).toString("hex");
+  signale.success(`Generated random JWT_SECRET ${process.env.JWT_SECRET}`);
+}
 
 const routes = readdirSync(join(__dirname, "routes"));
 routes.forEach((route) => {

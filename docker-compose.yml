@@ -20,6 +20,7 @@ services:
       - CUSTOM_HOST_NAME=SharX
       - IMAGE_STORAGE_DIR=data/images
       - PORT=8080
+      - JWT_SECRET=very-insecure-secret
     depends_on:
       - db
     ports:
