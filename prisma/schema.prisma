@@ -13,7 +13,7 @@ model Image {
   name      String
   uploaded  DateTime @default(now())
   size      Int
-  hash      String   @db.Char(64)
+  hash      String   @db.Char(64) @unique
 }
 
 model User {
