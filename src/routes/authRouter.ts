@@ -3,7 +3,7 @@ import { prisma } from "../index";
 import { createSignale } from "../utils";
 import { randomBytes, createHmac } from "crypto";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
-import { Prisma } from "@prisma/client";
+import { AuthJWT, Prisma } from "@prisma/client";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signale = createSignale(__filename);
@@ -23,13 +23,21 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
       !(typeof decoded.type === "string") ||
       !(decoded.type === "auth"))
       return res.status(401).json({ success: false, error: "Invalid token" });
-    prisma.user.findUnique({ where: { uuid: decoded.user } }).then(user => {
-      if (!user) {
-        return res.status(401).json({ success: false, error: "Invalid user" });
+    prisma.authJWT.findUnique({
+      where: {
+        token: token,
+      },
+      include: {
+        user: true,
+      },
+    }).then(tokenObj => {
+      if (!tokenObj) {
+        return res.status(403).json({ success: false, error: "Invalid token" });
       }
 
-      res.locals.user = user.uuid;
-      res.locals.userObj = user;
+      res.locals.user = tokenObj.user.uuid;
+      res.locals.userObj = tokenObj.user;
+      res.locals.jwt = tokenObj;
       next();
     }).catch((e: unknown) => {
       res.status(500).json({ success: false, error: e });
@@ -78,6 +86,17 @@ function hashPassword(password: string, salt?: string): { hash: string, salt: st
   };
 }
 
+async function genJWT(user: string, ip: string) {
+  const token = jwt.sign({ user: user, ip: ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+  await prisma.authJWT.create({
+    data: {
+      userId: user,
+      token: token,
+    },
+  });
+  return token;
+}
+
 router.post("/create", async (req, res) => {
   try {
     const { username, password, email } = req.body as CreateUserBody;
@@ -99,7 +118,7 @@ router.post("/create", async (req, res) => {
         },
       });
 
-      const token = jwt.sign({ user: user.uuid, ip: req.ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+      const token = await genJWT(user.uuid, req.ip);
 
       res.json({
         success: true,
@@ -143,12 +162,32 @@ router.post("/login", async (req, res) => {
 
     if (hash !== user.passwordHash) throw "Invalid credentials";
 
-    const token = jwt.sign({ user: user.uuid, ip: req.ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+    const token = await genJWT(user.uuid, req.ip);
 
     res.json({
       success: true,
       uuid: user.uuid,
       token: token,
+    });
+  }
+  catch (err) {
+    res.json({
+      success: false,
+      error: err,
+    });
+  }
+});
+
+router.delete("/logout", authenticateJWT, async (req, res) => {
+  try {
+    await prisma.authJWT.delete({
+      where: {
+        token: (res.locals.jwt as AuthJWT).token,
+      },
+    });
+
+    res.json({
+      success: true,
     });
   }
   catch (err) {
