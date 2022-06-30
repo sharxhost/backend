@@ -27,6 +27,13 @@ model User {
   email         String    @unique
   uploadKeys    UploadKey[]
   images        Image[]
+  jwts          AuthJWT[]
+}
+
+model AuthJWT {
+  user      User    @relation(fields: [userId], references: [uuid])
+  userId    String  @db.Uuid
+  token     String  @id
 }
 
 model UploadKey {
