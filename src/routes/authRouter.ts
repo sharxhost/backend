@@ -3,7 +3,7 @@ import { prisma } from "../index";
 import { createSignale } from "../utils";
 import { randomBytes, createHmac } from "crypto";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
-import { AuthJWT, Prisma } from "@prisma/client";
+import { AuthJWT, Prisma, User } from "@prisma/client";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signale = createSignale(__filename);
@@ -183,6 +183,52 @@ router.delete("/logout", authenticateJWT, async (req, res) => {
     await prisma.authJWT.delete({
       where: {
         token: (res.locals.jwt as AuthJWT).token,
+      },
+    });
+
+    res.json({
+      success: true,
+    });
+  }
+  catch (err) {
+    res.json({
+      success: false,
+      error: err,
+    });
+  }
+});
+
+interface ChangePasswordBody {
+  oldPassword: string;
+  password: string;
+}
+router.post("/changePassword", authenticateJWT, async (req, res) => {
+  try {
+    const { oldPassword, password } = req.body as ChangePasswordBody;
+
+    if (password.length == 0) throw "Please specify a password";
+
+    const user = res.locals.userObj as User;
+
+    const { hash: oldHash } = hashPassword(oldPassword, user.passwordSalt);
+
+    if (oldHash !== user.passwordHash) throw "Invalid credentials";
+
+    const { hash, salt } = hashPassword(password);
+
+    await prisma.user.update({
+      where: {
+        uuid: user.uuid,
+      },
+      data: {
+        passwordHash: hash,
+        passwordSalt: salt,
+      },
+    });
+
+    await prisma.authJWT.deleteMany({
+      where: {
+        userId: user.uuid,
       },
     });
 
