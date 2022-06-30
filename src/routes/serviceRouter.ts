@@ -24,7 +24,6 @@ router.get("/info", async (req, res) => {
   catch (err) {
     res.status(500).json({
       success: false,
-      message: "error while running git describe",
       error: err,
     });
   }
