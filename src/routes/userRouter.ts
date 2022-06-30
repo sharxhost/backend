@@ -10,7 +10,7 @@ const signale = createSignale(__filename);
 
 const router = Router();
 
-router.post("/createKey", authenticateJWT, async (req, res) => {
+router.post("/uploadKey", authenticateJWT, async (req, res) => {
   try {
     const key = jwt.sign({ user: res.locals.user as string, ip: req.ip, type: "upload" }, process.env.JWT_SECRET as string, { expiresIn: "30d" });
 
@@ -34,7 +34,7 @@ router.post("/createKey", authenticateJWT, async (req, res) => {
   }
 });
 
-router.get("/uploadKeys", authenticateJWT, async (req, res) => {
+router.get("/uploadKey", authenticateJWT, async (req, res) => {
   try {
     const keyObjects = await prisma.uploadKey.findMany({
       where: {
@@ -50,6 +50,34 @@ router.get("/uploadKeys", authenticateJWT, async (req, res) => {
     res.json({
       success: true,
       keys: keys,
+    });
+  }
+  catch (err) {
+    res.json({
+      success: false,
+      error: err,
+    });
+  }
+});
+
+router.delete("/uploadKey/:key", authenticateJWT, async (req, res) => {
+  try {
+    const keyObject = await prisma.uploadKey.findFirst({
+      where: {
+        key: req.params.key,
+        userId: res.locals.user as string,
+      },
+    });
+    if (!keyObject) throw "Key not found";
+
+    await prisma.uploadKey.delete({
+      where: {
+        key: req.params.key,
+      },
+    });
+
+    res.json({
+      success: true,
     });
   }
   catch (err) {
