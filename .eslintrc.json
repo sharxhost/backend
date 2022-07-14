@@ -32,6 +32,10 @@
 		"comma-dangle": [
 			"warn",
 			"always-multiline"
+		],
+		"new-parens": [
+			"warn",
+			"never"
 		]
 	}
 }

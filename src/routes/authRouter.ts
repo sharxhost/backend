@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response, Router } from "express";
 import { prisma } from "../index";
-import { createSignale } from "../utils";
+import { createSignale, wrapper } from "../utils";
 import { randomBytes, createHmac } from "crypto";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
 import { AuthJWT, Prisma, User } from "@prisma/client";
+import { ExpiredTokenError, IllegalCharacterError, InvalidAuthHeaderError, InvalidCredentialsError, InvalidTokenError, TooLongFieldError, TooShortFieldError, UserAlreadyRegisteredError } from "../errors";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signale = createSignale(__filename);
@@ -11,47 +12,45 @@ const signale = createSignale(__filename);
 const router = Router();
 
 export function authenticateJWT(req: Request, res: Response, next: NextFunction) {
-  const tokenHeader = req.headers["authorization"];
-  if (!tokenHeader) return res.status(401).json({ success: false, error: "No token provided" });
-  const token = tokenHeader.split(" ")[1];
-  if (!token) return res.status(401).json({ success: false, error: "No token provided" });
+  wrapper(res, async () => {
+    const tokenHeader = req.headers["authorization"];
+    if (!tokenHeader) throw new InvalidAuthHeaderError;
+    const token = tokenHeader.split(" ")[1];
+    if (!token) throw new InvalidAuthHeaderError;
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
-    if (!(decoded instanceof Object) ||
-      !(typeof decoded.user === "string") ||
-      !(typeof decoded.type === "string") ||
-      !(decoded.type === "auth"))
-      return res.status(401).json({ success: false, error: "Invalid token" });
-    prisma.authJWT.findUnique({
-      where: {
-        token: token,
-      },
-      include: {
-        user: true,
-      },
-    }).then(tokenObj => {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      if (!(decoded instanceof Object) ||
+        !(typeof decoded.user === "string") ||
+        !(typeof decoded.type === "string") ||
+        !(decoded.type === "auth"))
+        throw new InvalidTokenError;
+      const tokenObj = await prisma.authJWT.findUnique({
+        where: {
+          token: token,
+        },
+        include: {
+          user: true,
+        },
+      });
       if (!tokenObj) {
-        return res.status(403).json({ success: false, error: "Invalid token" });
+        throw new InvalidTokenError;
       }
 
       res.locals.user = tokenObj.user.uuid;
       res.locals.userObj = tokenObj.user;
       res.locals.jwt = tokenObj;
       next();
-    }).catch((e: unknown) => {
-      res.status(500).json({ success: false, error: e });
-    });
-  }
-  catch (err) {
-    if (typeof err === typeof TokenExpiredError) {
-      return res.status(403).json({ success: false, error: "Token expired" });
     }
-    else {
-      return res.status(401).json({ success: false, error: "Invalid token" });
+    catch (err) {
+      if (typeof err === typeof TokenExpiredError) {
+        throw new ExpiredTokenError;
+      }
+      else {
+        throw new InvalidTokenError;
+      }
     }
-  }
-
+  });
 }
 
 interface CreateUserBody {
@@ -60,16 +59,14 @@ interface CreateUserBody {
   email: string;
 }
 
-function checkUsername(username: string): boolean | string {
-  if (username.length < 3) return "Too short! Minimum 3 characters";
-  if (username.length > 16) return "Too long! Maximum 16 characters";
+function checkUsername(username: string) {
+  if (username.length < 3) throw new TooShortFieldError({ field: "username", minLength: 3 });
+  if (username.length > 16) throw new TooLongFieldError({ field: "username", maxLength: 16 });
 
   for (const c of username) {
     if (!([..."abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-"].includes(c)))
-      return `Invalid character: ${c}`;
+      throw new IllegalCharacterError({ field: "username", character: c });
   }
-
-  return true;
 }
 
 function hashPassword(password: string, salt?: string): { hash: string, salt: string } {
@@ -87,7 +84,7 @@ function hashPassword(password: string, salt?: string): { hash: string, salt: st
 }
 
 async function genJWT(user: string, ip: string) {
-  const token = jwt.sign({ user: user, ip: ip, type: "auth" }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
+  const token = jwt.sign({ user: user, ip: ip, type: "auth", rnd: randomBytes(8).toString("hex") }, process.env.JWT_SECRET as string, { expiresIn: "14d" });
   await prisma.authJWT.create({
     data: {
       userId: user,
@@ -97,14 +94,13 @@ async function genJWT(user: string, ip: string) {
   return token;
 }
 
-router.post("/create", async (req, res) => {
-  try {
+router.post("/create", (req, res) => {
+  wrapper(res, async () => {
     const { username, password, email } = req.body as CreateUserBody;
 
-    const usernameError = checkUsername(username);
-    if (usernameError !== true) throw usernameError;
-    if (password.length == 0) throw "Please specify a password";
-    if (email.length == 0) throw "Please specify an email";
+    checkUsername(username);
+    if (password.length < 5) throw new TooShortFieldError({ field: "password", minLength: 5 });
+    if (email.length < 1) throw new TooShortFieldError({ field: "email", minLength: 1 });
 
     const { hash, salt } = hashPassword(password);
 
@@ -120,25 +116,22 @@ router.post("/create", async (req, res) => {
 
       const token = await genJWT(user.uuid, req.ip);
 
-      res.json({
-        success: true,
+      return {
         uuid: user.uuid,
         token: token,
-      });
+      };
     }
     catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError) {
-        if (err.code === "P2002") throw "User already exists";
+        if (err.code === "P2002") {
+          throw new UserAlreadyRegisteredError({
+            field: (err.meta?.target as string[])[0],
+          });
+        }
       }
       throw err;
     }
-  }
-  catch (err) {
-    res.json({
-      success: false,
-      error: err,
-    });
-  }
+  });
 });
 
 interface LoginBody {
@@ -146,8 +139,8 @@ interface LoginBody {
   password: string;
 }
 
-router.post("/login", async (req, res) => {
-  try {
+router.post("/login", (req, res) => {
+  wrapper(res, async () => {
     const { password, email } = req.body as LoginBody;
 
     const user = await prisma.user.findUnique({
@@ -156,63 +149,51 @@ router.post("/login", async (req, res) => {
       },
     });
 
-    if (!user) throw "Invalid credentials";
+    if (!user) throw new InvalidCredentialsError;
 
     const { hash } = hashPassword(password, user.passwordSalt);
 
-    if (hash !== user.passwordHash) throw "Invalid credentials";
+    if (hash !== user.passwordHash) throw new InvalidCredentialsError;
 
     const token = await genJWT(user.uuid, req.ip);
 
-    res.json({
-      success: true,
+    return {
       uuid: user.uuid,
       token: token,
-    });
-  }
-  catch (err) {
-    res.json({
-      success: false,
-      error: err,
-    });
-  }
+    };
+  });
 });
 
-router.delete("/logout", authenticateJWT, async (req, res) => {
-  try {
+router.delete("/logout", authenticateJWT, (req, res) => {
+  wrapper(res, async () => {
     await prisma.authJWT.delete({
       where: {
         token: (res.locals.jwt as AuthJWT).token,
       },
     });
 
-    res.json({
-      success: true,
-    });
-  }
-  catch (err) {
-    res.json({
-      success: false,
-      error: err,
-    });
-  }
+    return {};
+  });
 });
 
 interface ChangePasswordBody {
   oldPassword: string;
   password: string;
 }
-router.post("/changePassword", authenticateJWT, async (req, res) => {
-  try {
+router.post("/changePassword", authenticateJWT, (req, res) => {
+  wrapper(res, async () => {
     const { oldPassword, password } = req.body as ChangePasswordBody;
 
-    if (password.length == 0) throw "Please specify a password";
+    if (password.length < 5) throw new TooShortFieldError({
+      field: "password",
+      minLength: 5,
+    });
 
     const user = res.locals.userObj as User;
 
     const { hash: oldHash } = hashPassword(oldPassword, user.passwordSalt);
 
-    if (oldHash !== user.passwordHash) throw "Invalid credentials";
+    if (oldHash !== user.passwordHash) throw new InvalidCredentialsError;
 
     const { hash, salt } = hashPassword(password);
 
@@ -232,16 +213,8 @@ router.post("/changePassword", authenticateJWT, async (req, res) => {
       },
     });
 
-    res.json({
-      success: true,
-    });
-  }
-  catch (err) {
-    res.json({
-      success: false,
-      error: err,
-    });
-  }
+    return {};
+  });
 });
 
 export const prefix = "/auth";

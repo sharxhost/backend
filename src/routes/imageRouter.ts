@@ -1,12 +1,14 @@
 import { Router } from "express";
-import { createSignale, imageHashAsync } from "../utils";
+import { createSignale, imageHashAsync, wrapper } from "../utils";
 import { prisma } from "../index";
 import { randomInt } from "crypto";
 import multer from "multer";
 import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname, join, resolve } from "path";
-import jwt, { TokenExpiredError } from "jsonwebtoken";
+import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
+import { ExpiredTokenError, ImageNotFoundError, InvalidAuthHeaderError, InvalidTokenError, MalformedRequestError, ResourceAlreadyExistsError } from "../errors";
+import { Prisma } from "@prisma/client";
 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -23,12 +25,12 @@ if (!existsSync(imageStorageDir)) {
   mkdirSync(absoluteImageStorageDir, { recursive: true });
 }
 
-router.post("/upload", multer().single("image"), async (req, res) => {
-  try {
+router.post("/upload", multer().single("image"), (req, res) => {
+  wrapper(res, async () => {
     const tokenHeader = req.headers["authorization"];
-    if (!tokenHeader) return res.status(401).json({ success: false, error: "No  provided" });
+    if (!tokenHeader) throw new InvalidAuthHeaderError;
     const token = tokenHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ success: false, error: "No token provided" });
+    if (!token) throw new InvalidAuthHeaderError;
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
@@ -36,17 +38,22 @@ router.post("/upload", multer().single("image"), async (req, res) => {
         !(typeof decoded.user === "string") ||
         !(typeof decoded.type === "string") ||
         !(decoded.type === "upload"))
-        return res.status(401).json({ success: false, error: "Invalid token" });
-      const keyObject = await prisma.uploadKey.findUnique({ where: { key: token } });
-      if (!keyObject) return res.status(401).json({ success: false, error: "Invalid token" });
-      const user = await prisma.user.findUnique({ where: { uuid: decoded.user } });
-      if (!user) {
-        return res.status(401).json({ success: false, error: "Invalid user" });
+        throw new InvalidTokenError;
+      const keyObject = await prisma.uploadKey.findUnique({
+        where: {
+          key: token,
+        },
+        include: {
+          user: true,
+        },
+      });
+      if (!keyObject) {
+        throw new InvalidTokenError;
       }
 
       const image = req.file;
 
-      if (!image) throw "No image provided";
+      if (!image) throw new MalformedRequestError({ field: "image" });
 
       const imageHash = await imageHashAsync({ data: image.buffer }, 16, true);
       let shortImageId = "";
@@ -60,38 +67,39 @@ router.post("/upload", multer().single("image"), async (req, res) => {
           name: image.originalname,
           hash: imageHash,
           size: image.size,
-          userId: user.uuid,
+          userId: keyObject.user.uuid,
         },
       });
 
       await writeFile(join(absoluteImageStorageDir, `${dbImage.uuid}${extname(image.originalname)}`), image.buffer);
 
-      res.json({
-        success: true,
+      return {
         shortid: shortImageId,
         uuid: dbImage.uuid,
-      });
+      };
     }
     catch (err) {
       if (typeof err === typeof TokenExpiredError) {
-        return res.status(403).json({ success: false, error: "Token expired" });
+        throw new ExpiredTokenError;
+      }
+      else if (typeof err === typeof JsonWebTokenError) {
+        throw new InvalidTokenError;
+      }
+      else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+        if (err.code === "P2002") {
+          // TODO: Return the existing image's url OR create a new object using the old filename
+          throw new ResourceAlreadyExistsError;
+        }
       }
       else {
-        return res.status(401).json({ success: false, error: "Invalid token" });
+        throw err;
       }
     }
-
-  }
-  catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err,
-    });
-  }
+  });
 });
 
-router.get("/:id", async (req, res) => {
-  try {
+router.get("/:id", (req, res) => {
+  wrapper(res, async () => {
     const imgId = req.params.id;
 
     const dbImage = await prisma.image.findUnique({
@@ -100,25 +108,19 @@ router.get("/:id", async (req, res) => {
       },
     });
 
-    if (!dbImage) throw "Image not found";
+    if (!dbImage) throw new ImageNotFoundError;
 
     const imgPath = `${dbImage.uuid}${extname(dbImage.name)}`;
 
-    if (!existsSync(join(absoluteImageStorageDir, imgPath))) throw "Image file not found";
+    if (!existsSync(join(absoluteImageStorageDir, imgPath))) throw new ImageNotFoundError;
 
     res.sendFile(imgPath, { root: absoluteImageStorageDir });
-  }
-  catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err,
-    });
-  }
+  });
 });
 
 
-router.get("/:id/meta", async (req, res) => {
-  try {
+router.get("/:id/meta", (req, res) => {
+  wrapper(res, async () => {
     const imgId = req.params.id;
 
     const dbImage = await prisma.image.findUnique({
@@ -127,24 +129,17 @@ router.get("/:id/meta", async (req, res) => {
       },
     });
 
-    if (!dbImage) throw "Image not found";
+    if (!dbImage) throw new ImageNotFoundError;
 
-    res.json({
-      success: true,
+    return {
       shortid: dbImage.shortid,
       uuid: dbImage.uuid,
       name: dbImage.name,
       uploaded: dbImage.uploaded,
       size: dbImage.size,
       hash: dbImage.hash,
-    });
-  }
-  catch (err) {
-    res.status(500).json({
-      success: false,
-      error: err,
-    });
-  }
+    };
+  });
 });
 
 export const prefix = "/image";

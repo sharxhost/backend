@@ -68,7 +68,7 @@ routes.forEach((route) => {
 });
 
 app.listen(port, () => {
-  startTime = new Date();
+  startTime = new Date;
   signale.success(`Listening on port ${port}`);
 });
 

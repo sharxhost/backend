@@ -3,6 +3,8 @@ import { basename } from "path";
 import Signale from "signale";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { Response } from "express";
+import { SharXError, UnknownError } from "./errors";
 
 export function createSignale(filename: string, notify = true) {
   const signale = Signale.scope(basename(filename));
@@ -25,4 +27,35 @@ export async function getOutput(command: string) {
   const asyncExec = promisify(exec);
   const { stdout } = await asyncExec(command);
   return stdout.trim();
+}
+
+export function success(res: Response, data: Record<string, unknown>) {
+  return res.status(200).json({ success: true, ...data });
+}
+
+function handleError(err: unknown, res: Response) {
+  if (err instanceof SharXError) {
+    err.send(res);
+  }
+  else {
+    new UnknownError(err).send(res);
+  }
+}
+
+export function wrapper(res: Response, cb: (() => void | Record<string, unknown> | Promise<void | Record<string, unknown>>)) {
+  try {
+    const result = cb();
+    if (result instanceof Promise) {
+      result.then(ret => {
+        if (ret)
+          success(res, ret);
+      }).catch(err => handleError(err, res));
+    }
+    else if (result) {
+      success(res, result);
+    }
+  }
+  catch (err) {
+    handleError(err, res);
+  }
 }
