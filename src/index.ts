@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { readdirSync } from "fs";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import cors from "cors";
 
 export let startTime: Date;
 
@@ -43,6 +44,7 @@ const app = express();
 const port = process.env.PORT || 8080;
 
 app.use(express.json());
+app.use(cors({ origin: process.env.FRONTEND_URL || true }));
 
 if (!process.env.JWT_SECRET) {
   signale.warn("$JWT_SECRET is not set. Using a random one. That means it will change every time the container is restarted and log everyone out!");
