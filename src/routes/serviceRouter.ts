@@ -18,6 +18,7 @@ router.get("/info", (req, res) => {
         semver: tag.substring(1).split("-")[0].split(".").map(x => parseInt(x)),
       },
       name: process.env.CUSTOM_HOST_NAME || "SharX",
+      desc: process.env.CUSTOM_HOST_DESCRIPTION || "An open-source image host and more",
     };
   });
 });
