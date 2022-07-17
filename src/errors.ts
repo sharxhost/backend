@@ -19,7 +19,7 @@ export abstract class SharXError {
   }
 
   send(res: Response): void {
-    res.status(this.httpCode).json(this.toJSON());
+    res.status(this.httpCode).json({ success: false, ...this.toJSON() });
   }
 }
 
