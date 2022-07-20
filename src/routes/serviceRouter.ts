@@ -28,6 +28,8 @@ router.get("/stats", (req, res) => {
     return {
       uptime: Math.floor(Date.now() / 1000) - Math.floor(startTime.getTime() / 1000),
       images: await prisma.image.count(),
+      users: await prisma.user.count(),
+      sessions: await prisma.authJWT.count(),
     };
   });
 });
