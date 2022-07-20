@@ -4,7 +4,7 @@ import Signale from "signale";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { Response } from "express";
-import { SharXError, UnknownError } from "../../api-types/src/errors";
+import { SharXError, UnknownError } from "../api-types/src/errors";
 
 export function createSignale(filename: string, notify = true) {
   const signale = Signale.scope(basename(filename));
