@@ -135,7 +135,7 @@ router.get("/:id/meta", (req, res) => {
       shortid: dbImage.shortid,
       uuid: dbImage.uuid,
       name: dbImage.name,
-      uploaded: dbImage.uploaded,
+      uploaded: dbImage.uploaded.getTime(),
       size: dbImage.size,
       hash: dbImage.hash,
     };
