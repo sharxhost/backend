@@ -4,7 +4,8 @@ import { createSignale, wrapper } from "../utils";
 import { randomBytes, createHmac } from "crypto";
 import jwt, { TokenExpiredError } from "jsonwebtoken";
 import { AuthJWT, Prisma, User } from "@prisma/client";
-import { ExpiredTokenError, IllegalCharacterError, InvalidAuthHeaderError, InvalidCredentialsError, InvalidTokenError, TooLongFieldError, TooShortFieldError, UserAlreadyRegisteredError } from "../errors";
+import { ExpiredTokenError, IllegalCharacterError, InvalidAuthHeaderError, InvalidCredentialsError, InvalidTokenError, TooLongFieldError, TooShortFieldError, UserAlreadyRegisteredError } from "../../api-types/src/errors";
+import { AuthChangePasswordBody, AuthCreateBody, AuthLoginBody } from "../../api-types/src/routes/auth";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signale = createSignale(__filename);
@@ -53,12 +54,6 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
   });
 }
 
-interface CreateUserBody {
-  username: string;
-  password: string;
-  email: string;
-}
-
 function checkUsername(username: string) {
   if (username.length < 3) throw new TooShortFieldError({ field: "username", minLength: 3 });
   if (username.length > 16) throw new TooLongFieldError({ field: "username", maxLength: 16 });
@@ -96,7 +91,7 @@ async function genJWT(user: string, ip: string) {
 
 router.post("/create", (req, res) => {
   wrapper(res, async () => {
-    const { username, password, email } = req.body as CreateUserBody;
+    const { username, password, email } = req.body as AuthCreateBody;
 
     checkUsername(username);
     if (password.length < 5) throw new TooShortFieldError({ field: "password", minLength: 5 });
@@ -134,14 +129,9 @@ router.post("/create", (req, res) => {
   });
 });
 
-interface LoginBody {
-  email: string;
-  password: string;
-}
-
 router.post("/login", (req, res) => {
   wrapper(res, async () => {
-    const { password, email } = req.body as LoginBody;
+    const { password, email } = req.body as AuthLoginBody;
 
     const user = await prisma.user.findUnique({
       where: {
@@ -176,13 +166,9 @@ router.delete("/logout", authenticateJWT, (req, res) => {
   });
 });
 
-interface ChangePasswordBody {
-  oldPassword: string;
-  password: string;
-}
 router.post("/changePassword", authenticateJWT, (req, res) => {
   wrapper(res, async () => {
-    const { oldPassword, password } = req.body as ChangePasswordBody;
+    const { oldPassword, password } = req.body as AuthChangePasswordBody;
 
     if (password.length < 5) throw new TooShortFieldError({
       field: "password",

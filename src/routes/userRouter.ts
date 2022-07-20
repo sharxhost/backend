@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { authenticateJWT } from "./authRouter";
 import { User } from "@prisma/client";
 import { randomBytes } from "crypto";
-import { ResourceNotFoundError } from "../errors";
+import { ResourceNotFoundError } from "../../api-types/src/errors";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const signale = createSignale(__filename);

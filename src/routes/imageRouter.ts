@@ -7,7 +7,7 @@ import { existsSync, mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import { extname, join, resolve } from "path";
 import jwt, { JsonWebTokenError, TokenExpiredError } from "jsonwebtoken";
-import { ExpiredTokenError, ImageNotFoundError, InvalidAuthHeaderError, InvalidTokenError, MalformedRequestError, ResourceAlreadyExistsError } from "../errors";
+import { ExpiredTokenError, ImageNotFoundError, InvalidAuthHeaderError, InvalidTokenError, MalformedRequestError, ResourceAlreadyExistsError } from "../../api-types/src/errors";
 import { Prisma } from "@prisma/client";
 
 
