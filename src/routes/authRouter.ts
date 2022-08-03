@@ -44,7 +44,12 @@ export function authenticateJWT(req: Request, res: Response, next: NextFunction)
       next();
     }
     catch (err) {
-      if (typeof err === typeof TokenExpiredError) {
+      if (err instanceof TokenExpiredError) {
+        await prisma.authJWT.delete({
+          where: {
+            token: token,
+          },
+        }).catch();
         throw new ExpiredTokenError;
       }
       else {
